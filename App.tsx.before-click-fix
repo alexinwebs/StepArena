@@ -1,0 +1,966 @@
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  Animated,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from 'react-native';
+
+import {
+  Activity,
+  ArrowRight,
+  Award,
+  ChartNoAxesColumn,
+  Footprints,
+  Heart,
+  House,
+  Moon,
+  Plus,
+  Settings,
+  Trophy,
+  UserRound,
+  Users,
+} from 'lucide-react-native';
+
+const INK = '#202024';
+const PAPER = '#F1EFF0';
+const WHITE = '#FBFAFB';
+const MUTED = '#929095';
+const ORANGE = '#FF482F';
+const LINE = '#DAD8DB';
+
+type Tab = 'Home' | 'Compete' | 'Challenges' | 'Profile';
+
+const tabs: { name: Tab; icon: any }[] = [
+  { name: 'Home', icon: House },
+  { name: 'Compete', icon: Trophy },
+  { name: 'Challenges', icon: Heart },
+  { name: 'Profile', icon: UserRound },
+];
+
+function Label({
+  children,
+  style,
+}: {
+  children: React.ReactNode;
+  style?: any;
+}) {
+  return <Text style={[styles.label, style]}>{children}</Text>;
+}
+
+function ProgressRing({
+  progress,
+  size = 150,
+}: {
+  progress: number;
+  size?: number;
+}) {
+  const safeProgress = Math.max(0, Math.min(progress, 1));
+  const animatedProgress = useRef(new Animated.Value(safeProgress)).current;
+  const [displayProgress, setDisplayProgress] = useState(safeProgress);
+
+  useEffect(() => {
+    const listenerId = animatedProgress.addListener(({ value }) => {
+      setDisplayProgress(value);
+    });
+
+    Animated.timing(animatedProgress, {
+      toValue: safeProgress,
+      duration: 850,
+      useNativeDriver: false,
+    }).start();
+
+    return () => {
+      animatedProgress.removeListener(listenerId);
+    };
+  }, [animatedProgress, safeProgress]);
+
+  const dotCount = 48;
+  const dotSize = Math.max(3, size * 0.025);
+  const radius = (size - dotSize) / 2;
+  const filledDots = Math.round(dotCount * displayProgress);
+
+  return (
+    <View
+      style={{
+        width: size,
+        height: size,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      {Array.from({ length: dotCount }).map((_, i) => {
+        const angle = (i / dotCount) * Math.PI * 2 - Math.PI / 2;
+        const x = size / 2 + Math.cos(angle) * radius - dotSize / 2;
+        const y = size / 2 + Math.sin(angle) * radius - dotSize / 2;
+
+        return (
+          <View
+            key={i}
+            style={{
+              position: 'absolute',
+              left: x,
+              top: y,
+              width: dotSize,
+              height: dotSize,
+              borderRadius: dotSize / 2,
+              backgroundColor: i < filledDots ? ORANGE : '#D9D7DA',
+              opacity: i < filledDots ? 1 : 0.85,
+            }}
+          />
+        );
+      })}
+      <View style={styles.ringCenter}>
+        <Text style={styles.ringPercent}>
+          {Math.round(displayProgress * 100)}%
+        </Text>
+        <Text style={styles.smallMuted}>of 30,000</Text>
+      </View>
+    </View>
+  );
+}
+
+function Dots({ count = 7 }: { count?: number }) {
+  return (
+    <View style={styles.dots}>
+      {Array.from({ length: count }).map((_, i) => (
+        <View
+          key={i}
+          style={[
+            styles.dot,
+            i === count - 1 && styles.dotActive,
+            i > count - 1 && styles.dotEmpty,
+          ]}
+        />
+      ))}
+    </View>
+  );
+}
+
+function Metric({
+  value,
+  label,
+}: {
+  value: string;
+  label: string;
+}) {
+  return (
+    <View style={styles.metric}>
+      <Text style={styles.metricValue}>{value}</Text>
+      <Text style={styles.smallMuted}>{label}</Text>
+    </View>
+  );
+}
+
+
+function AnimatedNumber({
+  value,
+  style,
+}: {
+  value: number;
+  style?: any;
+}) {
+  const animatedValue = useRef(new Animated.Value(0)).current;
+  const [displayValue, setDisplayValue] = useState(0);
+
+  useEffect(() => {
+    const listenerId = animatedValue.addListener(({ value: current }) => {
+      setDisplayValue(Math.round(current));
+    });
+
+    const animation = Animated.timing(animatedValue, {
+      toValue: value,
+      duration: 1100,
+      useNativeDriver: false,
+    });
+
+    animation.start();
+
+    return () => {
+      animation.stop();
+      animatedValue.removeListener(listenerId);
+    };
+  }, [animatedValue, value]);
+
+  return (
+    <Text
+      adjustsFontSizeToFit
+      numberOfLines={1}
+      style={style}
+      accessibilityLabel={`${value.toLocaleString('en-US')} steps`}
+    >
+      {displayValue.toLocaleString('en-US')}
+    </Text>
+  );
+}
+
+function HomeScreen() {
+  const { width } = useWindowDimensions();
+  const [goal, setGoal] = useState(30000);
+  const [showGoal, setShowGoal] = useState(false);
+  const steps = 22836;
+
+  return (
+    <ScrollView
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={styles.scrollContent}
+    >
+      <View style={styles.topBar}>
+        <View>
+          <Label>TODAY</Label>
+          <Text style={styles.date}>MONDAY, 26 MAY</Text>
+        </View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Adjust daily goal"
+          onPress={() => {
+            setGoal(goal === 30000 ? 10000 : 30000);
+            setShowGoal(true);
+          }}
+          style={({ pressed }) => [
+            styles.roundButton,
+            pressed && styles.pressed,
+          ]}
+        >
+          <Plus size={21} color={INK} />
+        </Pressable>
+      </View>
+
+      <View style={styles.hero}>
+        <View style={styles.stepLabelRow}>
+          <Footprints size={17} color={ORANGE} />
+          <Label>DAILY MOVEMENT</Label>
+        </View>
+        <AnimatedNumber value={steps} style={styles.bigSteps} />
+        <Text style={styles.goalCaption}>
+          STEPS WALKED TODAY
+        </Text>
+
+        <View style={styles.progressSection}>
+          <ProgressRing progress={Math.min(steps / goal, 1)} size={width * 0.42} />
+          <View style={styles.progressCopy}>
+            <Label>YOUR DAILY GOAL</Label>
+            <Text style={styles.remaining}>
+              {Math.max(goal - steps, 0).toLocaleString('en-US')}
+            </Text>
+            <Text style={styles.smallMuted}>steps remaining</Text>
+            <View style={styles.thinLine} />
+            <Text style={styles.progressNote}>
+              {showGoal ? 'Goal updated' : 'Keep your momentum.'}
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.metricsRow}>
+        <Metric value="38" label="MINUTES" />
+        <View style={styles.metricDivider} />
+        <Metric value="485" label="KCAL" />
+        <View style={styles.metricDivider} />
+        <Metric value="2.6" label="KM" />
+      </View>
+
+      <View style={styles.sectionHeading}>
+        <Text style={styles.sectionTitle}>Your week</Text>
+        <Text style={styles.smallMuted}>7 DAYS</Text>
+      </View>
+
+      <View style={styles.weekCard}>
+        {[
+          ['M', 0.45],
+          ['T', 0.72],
+          ['W', 0.58],
+          ['T', 0.85],
+          ['F', 0.36],
+          ['S', 0.96],
+          ['S', 0.76],
+        ].map(([day, height], i) => (
+          <View key={i} style={styles.weekColumn}>
+            <View style={styles.barTrack}>
+              <View
+                style={[
+                  styles.bar,
+                  {
+                    height: `${Number(height) * 100}%`,
+                    backgroundColor: i === 5 ? ORANGE : INK,
+                  },
+                ]}
+              />
+            </View>
+            <Text style={[styles.weekDay, i === 5 && { color: ORANGE }]}>
+              {day}
+            </Text>
+          </View>
+        ))}
+      </View>
+
+      <Pressable
+        onPress={() => {}}
+        style={({ pressed }) => [
+          styles.darkFeature,
+          pressed && styles.pressed,
+        ]}
+      >
+        <View style={styles.featureText}>
+          <Label style={{ color: '#B9B7BB' }}>CURRENT POSITION</Label>
+          <Text style={styles.featureTitle}>Keep climbing.</Text>
+          <Text style={styles.featureSubtitle}>
+            Your friends are moving today.
+          </Text>
+        </View>
+        <View style={styles.featureIcon}>
+          <Trophy color={ORANGE} size={25} />
+        </View>
+        <ArrowRight color={WHITE} size={18} />
+      </Pressable>
+
+      <View style={styles.sectionHeading}>
+        <Text style={styles.sectionTitle}>Activity streak</Text>
+        <Activity size={18} color={ORANGE} />
+      </View>
+      <View style={styles.streakCard}>
+        <View>
+          <Text style={styles.streakNumber}>08 DAYS</Text>
+          <Text style={styles.smallMuted}>Consistency beats intensity.</Text>
+        </View>
+        <Dots />
+      </View>
+    </ScrollView>
+  );
+}
+
+function CompeteScreen() {
+  const people = [
+    ['01', 'Aryan', '@aryan.moves', '34,221'],
+    ['02', 'Meera', '@meera.walks', '31,904'],
+    ['03', 'Rohit', '@rohit.steps', '28,611'],
+    ['04', 'You', '@your.username', '22,836'],
+    ['05', 'Sneha', '@sneha.moves', '21,442'],
+    ['06', 'Karan', '@karan.walks', '20,331'],
+  ];
+
+  return (
+    <ScrollView contentContainerStyle={styles.scrollContent}>
+      <Label>THE ARENA</Label>
+      <Text style={styles.pageTitle}>Compete.</Text>
+      <Text style={styles.pageSubtitle}>
+        Every step moves you forward.
+      </Text>
+
+      <View style={styles.segment}>
+        <View style={styles.segmentActive}>
+          <Text style={styles.segmentActiveText}>GLOBAL</Text>
+        </View>
+        <Text style={styles.segmentText}>FRIENDS</Text>
+        <Text style={styles.segmentText}>WEEKLY</Text>
+      </View>
+
+      <View style={styles.rankCard}>
+        <Label>YOUR CURRENT RANK</Label>
+        <View style={styles.rankRow}>
+          <Text style={styles.rankBig}>#04</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.rankName}>Keep moving.</Text>
+            <Text style={styles.smallMuted}>
+              5,775 steps behind third place
+            </Text>
+          </View>
+          <ChartNoAxesColumn size={23} color={ORANGE} />
+        </View>
+      </View>
+
+      <View style={styles.sectionHeading}>
+        <Text style={styles.sectionTitle}>Today's leaders</Text>
+        <Label>STEPS</Label>
+      </View>
+
+      {people.map(([rank, name, handle, score]) => (
+        <View
+          key={rank}
+          style={[styles.personRow, name === 'You' && styles.youRow]}
+        >
+          <Text style={[styles.rankIndex, name === 'You' && { color: ORANGE }]}>
+            {rank}
+          </Text>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarLetter}>{name[0]}</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.personName}>{name}</Text>
+            <Text style={styles.personHandle}>{handle}</Text>
+          </View>
+          <Text style={styles.personScore}>{score}</Text>
+        </View>
+      ))}
+
+      <Pressable style={styles.primaryButton}>
+        <Users size={18} color={WHITE} />
+        <Text style={styles.primaryButtonText}>Find friends</Text>
+      </Pressable>
+    </ScrollView>
+  );
+}
+
+function ChallengesScreen() {
+  return (
+    <ScrollView contentContainerStyle={styles.scrollContent}>
+      <Label>MAKE EVERY STEP COUNT</Label>
+      <Text style={styles.pageTitle}>Challenges.</Text>
+      <Text style={styles.pageSubtitle}>
+        A little competition goes a long way.
+      </Text>
+
+      <View style={styles.challengeCard}>
+        <Label>01 / DAILY CHALLENGE</Label>
+        <Text style={styles.challengeTitle}>10K steps.</Text>
+        <Text style={styles.smallMuted}>Reach 10,000 steps today.</Text>
+        <View style={styles.challengeDots}>
+          <Dots count={7} />
+          <Text style={styles.challengeProgress}>4 / 7 DAYS</Text>
+        </View>
+        <View style={styles.thinLine} />
+        <View style={styles.inlineBetween}>
+          <Text style={styles.smallMuted}>Your current streak</Text>
+          <ArrowRight color={INK} size={19} />
+        </View>
+      </View>
+
+      <View style={styles.darkChallenge}>
+        <Label style={{ color: '#C1BFC3' }}>02 / FRIEND CHALLENGE</Label>
+        <Text style={[styles.challengeTitle, { color: WHITE }]}>
+          Move together.
+        </Text>
+        <Text style={styles.darkSubtitle}>
+          Create a private challenge and invite your friends.
+        </Text>
+        <Pressable
+          style={styles.lightButton}
+          onPress={() => {}}
+        >
+          <Text style={styles.lightButtonText}>Create challenge</Text>
+          <ArrowRight size={18} color={INK} />
+        </Pressable>
+      </View>
+
+      <View style={styles.sectionHeading}>
+        <Text style={styles.sectionTitle}>Your achievements</Text>
+        <Award color={ORANGE} size={19} />
+      </View>
+      <View style={styles.achievementRow}>
+        <View style={styles.achievementCircle}>
+          <Footprints size={21} color={ORANGE} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.personName}>First 10K</Text>
+          <Text style={styles.smallMuted}>Take your first big step.</Text>
+        </View>
+        <Text style={styles.achievementStatus}>LOCKED</Text>
+      </View>
+    </ScrollView>
+  );
+}
+
+function ProfileScreen() {
+  return (
+    <ScrollView contentContainerStyle={styles.scrollContent}>
+      <View style={styles.topBar}>
+        <Label>YOUR SPACE</Label>
+        <Pressable style={styles.roundButton}>
+          <Settings size={20} color={INK} />
+        </Pressable>
+      </View>
+
+      <View style={styles.profileHero}>
+        <View style={styles.profileAvatar}>
+          <UserRound size={32} color={INK} />
+        </View>
+        <Text style={styles.profileName}>Your name</Text>
+        <Text style={styles.profileHandle}>@your.username</Text>
+        <Text style={styles.profileHint}>
+          Your journey, one step at a time.
+        </Text>
+      </View>
+
+      <View style={styles.profileStats}>
+        <Metric value="12" label="FOLLOWING" />
+        <View style={styles.metricDivider} />
+        <Metric value="28" label="FOLLOWERS" />
+        <View style={styles.metricDivider} />
+        <Metric value="08" label="BADGES" />
+      </View>
+
+      {[
+        [Activity, 'Activity history', 'Your steps and personal records'],
+        [Trophy, 'Achievements', 'Your milestones and streaks'],
+        [Heart, 'Health preferences', 'Your goals and permissions'],
+        [Moon, 'Appearance', 'Light and dark mode'],
+        [Settings, 'Settings', 'Privacy, account and support'],
+      ].map(([Icon, title, subtitle]: any) => (
+        <Pressable key={title} style={styles.settingRow}>
+          <View style={styles.settingIcon}>
+            <Icon size={19} color={INK} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.personName}>{title}</Text>
+            <Text style={styles.smallMuted}>{subtitle}</Text>
+          </View>
+          <ArrowRight size={17} color={MUTED} />
+        </Pressable>
+      ))}
+    </ScrollView>
+  );
+}
+
+export default function App() {
+  const [activeTab, setActiveTab] = useState<Tab>('Home');
+  const fade = useRef(new Animated.Value(1)).current;
+  const slide = useRef(new Animated.Value(0)).current;
+  const busy = useRef(false);
+
+  const navigate = (tab: Tab) => {
+    if (tab === activeTab || busy.current) return;
+    busy.current = true;
+
+    Animated.parallel([
+      Animated.timing(fade, {
+        toValue: 0,
+        duration: 90,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slide, {
+        toValue: -8,
+        duration: 90,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setActiveTab(tab);
+      slide.setValue(8);
+      Animated.parallel([
+        Animated.spring(fade, {
+          toValue: 1,
+          damping: 20,
+          stiffness: 190,
+          useNativeDriver: true,
+        }),
+        Animated.spring(slide, {
+          toValue: 0,
+          damping: 20,
+          stiffness: 190,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        busy.current = false;
+      });
+    });
+  };
+
+  const screens: Record<Tab, React.ReactNode> = {
+    Home: <HomeScreen />,
+    Compete: <CompeteScreen />,
+    Challenges: <ChallengesScreen />,
+    Profile: <ProfileScreen />,
+  };
+
+  return (
+    <SafeAreaView style={styles.safe}>
+      <StatusBar barStyle="dark-content" />
+      <View style={styles.app}>
+        <Animated.View
+          style={[
+            styles.screen,
+            { opacity: fade, transform: [{ translateY: slide }] },
+          ]}
+        >
+          {screens[activeTab]}
+        </Animated.View>
+
+        <View style={styles.bottomNav}>
+          {tabs.map(({ name, icon: Icon }) => {
+            const selected = activeTab === name;
+            return (
+              <Pressable
+                key={name}
+                accessibilityRole="tab"
+                accessibilityState={{ selected }}
+                onPress={() => navigate(name)}
+                style={styles.navItem}
+              >
+                <View style={styles.navIconWrap}>
+                  <Icon
+                    size={21}
+                    color={selected ? INK : MUTED}
+                    strokeWidth={selected ? 2.5 : 1.6}
+                  />
+                  {selected && <View style={styles.navDot} />}
+                </View>
+                <Text
+                  style={[
+                    styles.navLabel,
+                    selected && styles.navLabelActive,
+                  ]}
+                >
+                  {name}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: PAPER },
+  app: { flex: 1, backgroundColor: PAPER },
+  screen: { flex: 1 },
+  scrollContent: { paddingHorizontal: 23, paddingTop: 18, paddingBottom: 32 },
+  label: {
+    fontSize: 10,
+    fontWeight: '600',
+    letterSpacing: 2.1,
+    color: MUTED,
+  },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 27,
+  },
+  date: {
+    fontSize: 10,
+    letterSpacing: 1.2,
+    color: MUTED,
+    marginTop: 6,
+  },
+  roundButton: {
+    width: 39,
+    height: 39,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: LINE,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pressed: { opacity: 0.72, transform: [{ scale: 0.98 }] },
+  hero: { paddingTop: 10, paddingBottom: 17 },
+  stepLabelRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+  bigSteps: {
+    fontSize: 57,
+    lineHeight: 70,
+    fontWeight: '300',
+    letterSpacing: -2.5,
+    color: INK,
+    marginTop: 14,
+    fontVariant: ['tabular-nums'],
+  },
+  goalCaption: {
+    color: MUTED,
+    fontSize: 10,
+    letterSpacing: 2,
+    marginTop: 1,
+  },
+  progressSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 27,
+    gap: 15,
+  },
+  ringCenter: {
+    ...StyleSheet.absoluteFill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ringPercent: {
+    fontSize: 27,
+    fontWeight: '300',
+    color: INK,
+    letterSpacing: -1,
+  },
+  smallMuted: { color: MUTED, fontSize: 11, lineHeight: 17 },
+  progressCopy: { flex: 1, gap: 5 },
+  remaining: {
+    color: INK,
+    fontSize: 30,
+    fontWeight: '300',
+    letterSpacing: -1,
+    marginTop: 7,
+  },
+  thinLine: { height: 1, backgroundColor: LINE, marginVertical: 10 },
+  progressNote: { fontSize: 11, color: INK },
+  metricsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: LINE,
+    paddingVertical: 18,
+    marginTop: 7,
+  },
+  metric: { flex: 1, alignItems: 'center', gap: 3 },
+  metricValue: { fontSize: 23, color: INK, fontWeight: '300' },
+  metricDivider: { height: 28, width: 1, backgroundColor: LINE },
+  sectionHeading: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 29,
+    marginBottom: 14,
+  },
+  sectionTitle: { fontSize: 16, color: INK, fontWeight: '500' },
+  weekCard: {
+    flexDirection: 'row',
+    height: 130,
+    borderRadius: 17,
+    paddingHorizontal: 18,
+    paddingTop: 17,
+    paddingBottom: 12,
+    backgroundColor: WHITE,
+    justifyContent: 'space-between',
+  },
+  weekColumn: { flex: 1, alignItems: 'center', gap: 8 },
+  barTrack: {
+    flex: 1,
+    width: 15,
+    backgroundColor: '#EFEDF0',
+    borderRadius: 9,
+    justifyContent: 'flex-end',
+    overflow: 'hidden',
+  },
+  bar: { width: '100%', borderRadius: 9 },
+  weekDay: { fontSize: 10, color: MUTED },
+  darkFeature: {
+    marginTop: 17,
+    backgroundColor: INK,
+    borderRadius: 17,
+    padding: 19,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 13,
+  },
+  featureText: { flex: 1, gap: 7 },
+  featureTitle: { fontSize: 22, color: WHITE, fontWeight: '400' },
+  featureSubtitle: { fontSize: 11, color: '#C1BFC3' },
+  featureIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#343337',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  streakCard: {
+    backgroundColor: WHITE,
+    borderRadius: 16,
+    padding: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  streakNumber: { color: INK, fontSize: 22, marginBottom: 5 },
+  dots: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: INK },
+  dotActive: { backgroundColor: ORANGE, width: 10, height: 10, borderRadius: 5 },
+  dotEmpty: { backgroundColor: 'transparent', borderWidth: 1, borderColor: LINE },
+  pageTitle: {
+    fontSize: 38,
+    lineHeight: 46,
+    color: INK,
+    fontWeight: '300',
+    letterSpacing: -1.5,
+    marginTop: 12,
+  },
+  pageSubtitle: { fontSize: 12, color: MUTED, marginTop: 4, marginBottom: 24 },
+  segment: {
+    backgroundColor: '#E5E3E6',
+    borderRadius: 25,
+    padding: 4,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 22,
+  },
+  segmentActive: {
+    backgroundColor: INK,
+    borderRadius: 22,
+    paddingVertical: 11,
+    paddingHorizontal: 19,
+  },
+  segmentActiveText: { color: WHITE, fontSize: 10, letterSpacing: 1.4 },
+  segmentText: {
+    color: MUTED,
+    fontSize: 10,
+    alignSelf: 'center',
+    paddingHorizontal: 8,
+  },
+  rankCard: { backgroundColor: WHITE, borderRadius: 17, padding: 18 },
+  rankRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 14 },
+  rankBig: { color: INK, fontSize: 42, fontWeight: '300', letterSpacing: -2 },
+  rankName: { color: INK, fontSize: 14, marginBottom: 5 },
+  personRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 13,
+    borderBottomWidth: 1,
+    borderColor: LINE,
+  },
+  youRow: {
+    backgroundColor: '#E8E5E7',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    borderBottomWidth: 0,
+  },
+  rankIndex: { width: 23, color: MUTED, fontSize: 11 },
+  avatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#E0DDE0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarLetter: { fontSize: 13, fontWeight: '600', color: INK },
+  personName: { fontSize: 13, color: INK, fontWeight: '500' },
+  personHandle: { fontSize: 10, color: MUTED, marginTop: 3 },
+  personScore: { color: INK, fontSize: 12, fontVariant: ['tabular-nums'] },
+  primaryButton: {
+    backgroundColor: INK,
+    borderRadius: 28,
+    minHeight: 53,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    marginTop: 23,
+  },
+  primaryButtonText: { color: WHITE, fontSize: 13, fontWeight: '500' },
+  challengeCard: {
+    marginTop: 5,
+    backgroundColor: WHITE,
+    borderRadius: 18,
+    padding: 20,
+  },
+  challengeTitle: {
+    fontSize: 30,
+    fontWeight: '300',
+    color: INK,
+    letterSpacing: -1,
+    marginTop: 15,
+    marginBottom: 7,
+  },
+  challengeDots: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 25,
+    marginBottom: 6,
+  },
+  challengeProgress: { color: MUTED, fontSize: 9, letterSpacing: 1 },
+  inlineBetween: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  darkChallenge: {
+    backgroundColor: INK,
+    borderRadius: 18,
+    padding: 20,
+    marginTop: 16,
+  },
+  darkSubtitle: { color: '#C1BFC3', fontSize: 12, lineHeight: 19 },
+  lightButton: {
+    marginTop: 23,
+    backgroundColor: WHITE,
+    borderRadius: 28,
+    minHeight: 48,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  lightButtonText: { color: INK, fontSize: 12, fontWeight: '500' },
+  achievementRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: WHITE,
+    borderRadius: 14,
+    padding: 14,
+  },
+  achievementCircle: {
+    width: 43,
+    height: 43,
+    borderRadius: 22,
+    backgroundColor: PAPER,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  achievementStatus: { color: MUTED, fontSize: 9, letterSpacing: 1 },
+  profileHero: { alignItems: 'center', paddingTop: 28, paddingBottom: 30 },
+  profileAvatar: {
+    width: 86,
+    height: 86,
+    borderRadius: 43,
+    backgroundColor: '#E1DEE1',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  profileName: { fontSize: 23, color: INK, fontWeight: '400' },
+  profileHandle: { color: MUTED, fontSize: 12, marginTop: 6 },
+  profileHint: { color: MUTED, fontSize: 11, marginTop: 14 },
+  profileStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 19,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: LINE,
+    marginBottom: 17,
+  },
+  settingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderColor: LINE,
+  },
+  settingIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: WHITE,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bottomNav: {
+    height: 69,
+    backgroundColor: PAPER,
+    borderTopWidth: 1,
+    borderColor: LINE,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+  },
+  navItem: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 4 },
+  navIconWrap: { alignItems: 'center', justifyContent: 'center', height: 25 },
+  navDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: ORANGE,
+    position: 'absolute',
+    bottom: -4,
+  },
+  navLabel: { fontSize: 9, color: MUTED },
+  navLabelActive: { color: INK, fontWeight: '600' },
+});
