@@ -188,20 +188,20 @@ import {
 } from 'lucide-react-native';
 
 let INK = '#202024';
-let PAPER = '#F1EFF0';
+let PAPER = '#F5F4F1';
 let WHITE = '#FBFAFB';
-let MUTED = '#929095';
+let MUTED = '#77746F';
 const ORANGE = '#FF482F';
-let LINE = '#DAD8DB';
-let SURFACE = '#FBFAFB';
+let LINE = '#E3E1DC';
+let SURFACE = '#FFFFFF';
 let DARK_SURFACE = '#202024';
-let SOFT_SURFACE = '#E8E5E7';
-let TRACK = '#EFEDF0';
-let AVATAR_SURFACE = '#E0DDE0';
+let SOFT_SURFACE = '#EEECE7';
+let TRACK = '#ECEAE6';
+let AVATAR_SURFACE = '#E9E6E0';
 let ACCENT_SOFT = '#FFF0EC';
-let SEGMENT_SURFACE = '#E5E3E6';
-let PROGRESS_TRACK = '#E5E2E5';
-let RING_EMPTY = '#D9D7DA';
+let SEGMENT_SURFACE = '#ECEAE6';
+let PROGRESS_TRACK = '#E8E6E1';
+let RING_EMPTY = '#D9D6D0';
 
 function showMessage(title: string, message: string) {
   if (Platform.OS === 'web') {
