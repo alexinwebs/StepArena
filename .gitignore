@@ -12,3 +12,12 @@ ios/Pods/
 .env.*
 !.env.example
 .DS_Store
+
+# Local backups
+.backups/
+*-backup*/
+*.backup
+*.backup-*
+*.before-*
+*.pre-*
+App.tsx.backup*
