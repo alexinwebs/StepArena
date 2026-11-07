@@ -641,7 +641,7 @@ function HomeScreen({
                       {hourlyData.hours.map((count, hour) => {
                         const peak = Math.max(1, ...hourlyData.hours);
                         const peakHour = count > 0 && count === peak;
-                        return <View key={hour} style={styles.miniHourlyTrack}><View style={[styles.miniHourlyBar, { height: `${Math.max(count > 0 ? 9 : 0, (count / peak) * 100)}%`, backgroundColor: peakHour ? ORANGE : count > 0 ? '#A7A5AD' : '#39383E' }]} /></View>;
+                        return <View key={hour} style={styles.miniHourlyTrack}><View style={[styles.miniHourlyBar, { height: `${Math.max(count > 0 ? 9 : 0, (count / peak) * 100)}%`, backgroundColor: peakHour ? ORANGE : count > 0 ? MUTED : TRACK }]} /></View>;
                       })}
                     </View>
                   ) : (
@@ -817,7 +817,7 @@ function ChallengesScreen({
               : achievement.kind === 'streak'
                 ? streakDays
                 : goalDays;
-          const progress = Math.min(progressValue / achievement.threshold, 1);
+          const progress = unlocked ? 1 : Math.min(progressValue / achievement.threshold, 1);
 
           return (
             <Pressable
@@ -887,7 +887,7 @@ function ChallengesScreen({
             : achievement.kind === 'streak'
               ? streakDays
               : goalDays;
-        const progress = Math.min(currentValue / achievement.threshold, 1);
+        const progress = unlocked ? 1 : Math.min(currentValue / achievement.threshold, 1);
         const unit =
           achievement.kind === 'steps'
             ? 'steps'
@@ -986,7 +986,7 @@ function ChallengesScreen({
                 </View>
                 <View style={styles.inlineBetween}>
                   <Text style={styles.smallMuted}>
-                    {Math.min(currentValue, achievement.threshold).toLocaleString('en-US')} / {achievement.threshold.toLocaleString('en-US')} {unit}
+                    {(unlocked ? achievement.threshold : Math.min(currentValue, achievement.threshold)).toLocaleString('en-US')} / {achievement.threshold.toLocaleString('en-US')} {unit}
                   </Text>
                   <Text style={styles.personName}>{Math.round(progress * 100)}%</Text>
                 </View>
@@ -1190,19 +1190,19 @@ export default function App() {
 
   // Rebuild the existing style sheet with semantic colors; screen layout stays unchanged.
   INK = isDark ? '#F2F0F2' : '#202024';
-  PAPER = isDark ? '#141416' : '#F1EFF0';
+  PAPER = isDark ? '#141416' : '#F5F4F1';
   WHITE = '#FBFAFB';
-  MUTED = isDark ? '#AAA7AE' : '#929095';
-  LINE = isDark ? '#343237' : '#DAD8DB';
-  SURFACE = isDark ? '#202024' : '#FBFAFB';
+  MUTED = isDark ? '#AAA7AE' : '#77746F';
+  LINE = isDark ? '#343237' : '#E3E1DC';
+  SURFACE = isDark ? '#202024' : '#FFFFFF';
   DARK_SURFACE = '#202024';
-  SOFT_SURFACE = isDark ? '#2B292E' : '#E8E5E7';
-  TRACK = isDark ? '#343237' : '#EFEDF0';
-  AVATAR_SURFACE = isDark ? '#343237' : '#E0DDE0';
+  SOFT_SURFACE = isDark ? '#2B292E' : '#EEECE7';
+  TRACK = isDark ? '#343237' : '#ECEAE6';
+  AVATAR_SURFACE = isDark ? '#343237' : '#E9E6E0';
   ACCENT_SOFT = isDark ? '#3A2423' : '#FFF0EC';
-  SEGMENT_SURFACE = isDark ? '#29272C' : '#E5E3E6';
-  PROGRESS_TRACK = isDark ? '#343237' : '#E5E2E5';
-  RING_EMPTY = isDark ? '#46434A' : '#D9D7DA';
+  SEGMENT_SURFACE = isDark ? '#29272C' : '#ECEAE6';
+  PROGRESS_TRACK = isDark ? '#343237' : '#E8E6E1';
+  RING_EMPTY = isDark ? '#46434A' : '#D9D6D0';
   styles = createStyles();
 
   useEffect(() => {
@@ -2316,7 +2316,7 @@ function createStyles() {
   expandedDayGoal: { color: ORANGE, fontSize: 12, fontWeight: '700' },
   expandedDayHint: { color: MUTED, fontSize: 7, letterSpacing: 0.2, marginTop: 5 },
   miniHourlyBars: { height: 25, flexDirection: 'row', alignItems: 'flex-end', gap: 1, marginTop: 7 },
-  miniHourlyTrack: { flex: 1, height: '100%', justifyContent: 'flex-end', backgroundColor: '#34333A', borderRadius: 2, overflow: 'hidden' },
+  miniHourlyTrack: { flex: 1, height: '100%', justifyContent: 'flex-end', backgroundColor: TRACK, borderRadius: 2, overflow: 'hidden' },
   miniHourlyBar: { width: '100%', borderRadius: 2 },
   dayDot: { width: 3, height: 3, borderRadius: 2, backgroundColor: 'transparent' },
   dayDotAnchor: { width: 3, height: 3, borderRadius: 2, backgroundColor: 'transparent' },
@@ -2339,14 +2339,14 @@ function createStyles() {
   hourlyChartScroll: { paddingTop: 8, paddingBottom: 5, paddingHorizontal: 2 },
   hourlyDotChart: { flexDirection: 'row', alignItems: 'flex-end', gap: 6 },
   hourColumn: { width: 14, alignItems: 'center', justifyContent: 'flex-end', gap: 8, paddingVertical: 6, borderRadius: 8 },
-  hourColumnSelected: { backgroundColor: '#2A292E' },
+  hourColumnSelected: { backgroundColor: SOFT_SURFACE },
   hourDotStack: { height: 86, justifyContent: 'flex-end', gap: 2.5 },
-  hourDot: { width: 5, height: 5, borderRadius: 1.5, backgroundColor: '#343339' },
-  hourDotActive: { backgroundColor: '#85828A' },
+  hourDot: { width: 5, height: 5, borderRadius: 1.5, backgroundColor: TRACK },
+  hourDotActive: { backgroundColor: MUTED },
   hourDotSelected: { backgroundColor: ORANGE, transform: [{ scale: 1.08 }] },
   hourTick: { height: 11, color: MUTED, fontSize: 7, fontVariant: ['tabular-nums'] },
   hourTickSelected: { color: ORANGE, fontWeight: '800' },
-  hourAxisLine: { height: 1, backgroundColor: '#3A393F', marginTop: 2 },
+  hourAxisLine: { height: 1, backgroundColor: LINE, marginTop: 2 },
   hourSelectedReadout: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', paddingTop: 5 },
   hourReadoutLabel: { color: MUTED, fontSize: 8, letterSpacing: 1.3, fontWeight: '700' },
   hourReadoutTime: { color: INK, fontSize: 15, fontWeight: '500', marginTop: 3 },
@@ -2495,9 +2495,9 @@ function createStyles() {
     alignItems: 'center',
     backgroundColor: PAPER,
   },
-  goalPresetSelected: { backgroundColor: DARK_SURFACE, borderColor: DARK_SURFACE },
+  goalPresetSelected: { backgroundColor: ACCENT_SOFT, borderColor: ORANGE },
   goalPresetText: { color: INK, fontSize: 12, fontWeight: '600' },
-  goalPresetTextSelected: { color: WHITE },
+  goalPresetTextSelected: { color: INK },
   goalInput: {
     borderWidth: 1,
     borderColor: LINE,
