@@ -1286,8 +1286,8 @@ export default function App() {
   };
 
   const [activeTab, setActiveTab] = useState<Tab>('Home');
-  const [dailySteps, setDailySteps] = useState(22836);
-  const dailyStepsRef = useRef(22836);
+  const [dailySteps, setDailySteps] = useState(0);
+  const dailyStepsRef = useRef(0);
   const [dailyGoal, setDailyGoal] = useState(DEFAULT_DAILY_GOAL);
   const dailyGoalRef = useRef(DEFAULT_DAILY_GOAL);
   const [goalLoaded, setGoalLoaded] = useState(false);
@@ -1404,13 +1404,14 @@ export default function App() {
     let active = true;
 
     const today = getTodayKey();
+    let loadSucceeded = false;
 
     AsyncStorage.getItem('steparena.dailyActivity')
       .then((raw) => {
-        if (!active || !raw) return;
+        if (!active) return;
 
         try {
-          const saved = JSON.parse(raw);
+          const saved = raw ? JSON.parse(raw) : {};
           const loadedHistory: DailyActivity[] = Array.isArray(saved.history)
             ? saved.history
                 .filter(
@@ -1493,19 +1494,17 @@ export default function App() {
             dailyStepsRef.current = 0;
             setDailySteps(0);
           }
-        } catch {
-          console.warn('Saved daily activity was invalid; starting fresh.');
-          dailyStepsRef.current = 0;
-          setDailySteps(0);
-          activityHistoryRef.current = [];
-          setActivityHistory([]);
+
+          loadSucceeded = true;
+        } catch (error) {
+          console.warn('Saved daily activity is invalid; saving is paused to protect existing data.', error);
         }
       })
       .catch((error) => {
         console.warn('Could not load daily activity:', error);
       })
       .finally(() => {
-        if (active) setStepsLoaded(true);
+        if (active && loadSucceeded) setStepsLoaded(true);
       });
 
     return () => {
