@@ -151,6 +151,7 @@ function buildActivityWeek(history: DailyActivity[], todaySteps: number, todayGo
 import {
   Alert,
   Animated,
+  Easing,
   Platform,
   Pressable,
   SafeAreaView,
@@ -441,6 +442,9 @@ function HomeScreen({
   // A single native-driven value animates the selected day. The seven columns
   // themselves never change width, so selecting a day cannot reflow the row.
   const selectedDayProgress = useRef(new Animated.Value(0)).current;
+  const weekBarEntranceValues = useRef(
+    Array.from({ length: 7 }, () => new Animated.Value(0)),
+  ).current;
   const animateSelectedDay = (next: number, onFinished?: () => void) => {
     Animated.spring(selectedDayProgress, {
       toValue: next,
@@ -452,6 +456,14 @@ function HomeScreen({
       if (finished) onFinished?.();
     });
   };
+
+  // Start the entrance only after the selected day's animated views mount.
+  useEffect(() => {
+    if (selectedDate) {
+      animateSelectedDay(1);
+    }
+  }, [selectedDate]);
+
 
   useEffect(() => {
     let active = true;
@@ -508,6 +520,29 @@ function HomeScreen({
   const visibleDays = shiftedWeekData.filter((item) => item.date <= todayKey && item.hasRecord);
   const completedDays = visibleDays.filter((item) => item.completed).length;
   const averageSteps = visibleDays.length ? Math.round(visibleDays.reduce((sum, item) => sum + item.steps, 0) / visibleDays.length) : 0;
+
+  // Animate the weekly meter only when Home is visible. HomeScreen is unmounted
+  // when leaving the tab, so returning to Home naturally replays this entrance.
+  // On cold launch, wait until the intro overlay has finished.
+  useEffect(() => {
+    if (!introComplete) return;
+
+    weekBarEntranceValues.forEach((value) => value.setValue(0));
+    const entrance = Animated.stagger(
+      65,
+      shiftedWeekData.map((item, index) =>
+        Animated.timing(weekBarEntranceValues[index], {
+          toValue: 1,
+          duration: 520,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: false,
+        }),
+      ),
+    );
+
+    entrance.start();
+    return () => entrance.stop();
+  }, [introComplete, weekOffset]);
 
   return (
     <ScrollView
@@ -588,9 +623,8 @@ function HomeScreen({
               if (selected) {
                 animateSelectedDay(0, () => setSelectedDate(null));
               } else {
-                setSelectedDate(item.date);
                 selectedDayProgress.setValue(0);
-                animateSelectedDay(1);
+                setSelectedDate(item.date);
               }
             };
             const barScale = selected
@@ -610,7 +644,19 @@ function HomeScreen({
                     <Text style={[styles.weekDay, fixedPoint && styles.anchorDay, item.isToday && { color: ORANGE, fontWeight: '800' }, selected && { color: ORANGE }]}>{item.day}</Text>
                     <Animated.View style={{ transform: [{ scaleX: barScale }] }}>
                       <View style={styles.barTrack}>
-                        <View style={[styles.bar, { height: `${height}%`, backgroundColor: item.isToday || item.completed ? ORANGE : INK, opacity: item.isFuture ? 0.18 : 1 }]} />
+                        <Animated.View
+                          style={[
+                            styles.bar,
+                            {
+                              height: weekBarEntranceValues[index].interpolate({
+                                inputRange: [0, 1],
+                                outputRange: ['0%', `${height}%`],
+                              }),
+                              backgroundColor: item.isToday || item.completed ? ORANGE : INK,
+                              opacity: item.isFuture ? 0.18 : 1,
+                            },
+                          ]}
+                        />
                       </View>
                     </Animated.View>
                     <Text style={[styles.weekStepsTiny, selected && { color: ORANGE, fontWeight: '800' }]}>{item.hasRecord ? `${Math.round(progress * 100)}%` : '—'}</Text>
@@ -1258,57 +1304,41 @@ export default function App() {
   const [showIntro, setShowIntro] = useState(true);
   const introOpacity = useRef(new Animated.Value(1)).current;
   const introRunnerOpacity = useRef(new Animated.Value(0)).current;
-  const introRunnerScale = useRef(new Animated.Value(0.82)).current;
-  const introLetterValues = useRef(
-    'STEPARENA'.split('').map(() => new Animated.Value(0))
-  ).current;
-  const introAccentWidth = useRef(new Animated.Value(4)).current;
+  const introRunnerScale = useRef(new Animated.Value(0.90)).current;
+  const introWordmarkOpacity = useRef(new Animated.Value(0)).current;
 
   const seenUnlocks = useRef<Set<string> | null>(null);
 
   useEffect(() => {
     if (!showIntro) return;
 
-    const runnerEntrance = Animated.parallel([
-      Animated.timing(introRunnerOpacity, {
-        toValue: 1,
-        duration: 360,
-        useNativeDriver: true,
-      }),
-      Animated.spring(introRunnerScale, {
-        toValue: 1,
-        damping: 14,
-        stiffness: 155,
-        mass: 0.8,
-        useNativeDriver: true,
-      }),
-    ]);
-
-    const lettersEntrance = Animated.stagger(
-      58,
-      introLetterValues.map((value) =>
-        Animated.timing(value, {
-          toValue: 1,
-          duration: 170,
-          useNativeDriver: true,
-        })
-      )
-    );
-
     const intro = Animated.sequence([
-      Animated.delay(120),
-      runnerEntrance,
-      Animated.delay(100),
-      lettersEntrance,
-      Animated.timing(introAccentWidth, {
-        toValue: 38,
-        duration: 280,
-        useNativeDriver: false,
-      }),
-      Animated.delay(240),
+      Animated.parallel([
+        Animated.timing(introRunnerOpacity, {
+          toValue: 1,
+          duration: 180,
+          useNativeDriver: true,
+        }),
+        Animated.spring(introRunnerScale, {
+          toValue: 1,
+          damping: 16,
+          stiffness: 180,
+          mass: 0.7,
+          useNativeDriver: true,
+        }),
+        Animated.sequence([
+          Animated.delay(100),
+          Animated.timing(introWordmarkOpacity, {
+            toValue: 1,
+            duration: 180,
+            useNativeDriver: true,
+          }),
+        ]),
+      ]),
+      Animated.delay(80),
       Animated.timing(introOpacity, {
         toValue: 0,
-        duration: 320,
+        duration: 180,
         useNativeDriver: true,
       }),
     ]);
@@ -1323,8 +1353,7 @@ export default function App() {
     introOpacity,
     introRunnerOpacity,
     introRunnerScale,
-    introLetterValues,
-    introAccentWidth,
+    introWordmarkOpacity,
   ]);
 
   useEffect(() => {
@@ -1996,11 +2025,15 @@ export default function App() {
             }}
           >
             <Animated.Image
-              source={require('./assets/splash-icon.png')}
+              source={
+                isDark
+                  ? require('./assets/splash-runner-dark.png')
+                  : require('./assets/splash-runner-light.png')
+              }
               resizeMode="contain"
               style={{
-                width: 190,
-                height: 190,
+                width: 230,
+                height: 230,
                 opacity: introRunnerOpacity,
                 transform: [{ scale: introRunnerScale }],
               }}
@@ -2011,7 +2044,8 @@ export default function App() {
                 flexDirection: 'row',
                 alignItems: 'center',
                 justifyContent: 'center',
-                marginTop: 18,
+                marginTop: 8,
+                opacity: 1,
               }}
             >
               {introWordmarkLetters.map((source, index) => (
@@ -2023,25 +2057,19 @@ export default function App() {
                     width: 32,
                     height: 32,
                     marginHorizontal: 1,
-                    opacity: introLetterValues[index],
-                    transform: [{
-                      translateY: introLetterValues[index].interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [9, 0],
-                      }),
-                    }],
+                    opacity: introWordmarkOpacity,
                   }}
                 />
               ))}
             </View>
 
-            <Animated.View
+            <View
               style={{
-                width: introAccentWidth,
+                width: 38,
                 height: 3,
                 borderRadius: 2,
                 backgroundColor: ORANGE,
-                marginTop: 19,
+                marginTop: 12,
               }}
             />
           </Animated.View>
