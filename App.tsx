@@ -745,6 +745,10 @@ function HomeScreen({
                   <Text style={styles.expandedDayDate}>{formatShortDate(selectedDay.date)}</Text>
                   <Text style={styles.expandedDaySteps}>{selectedDay.hasRecord ? selectedDay.steps.toLocaleString('en-US') : '—'}</Text>
                   <Text style={styles.expandedDayCaption}>STEPS · {selectedDay.hasRecord ? `${Math.round((selectedDay.steps / Math.max(selectedDay.goal, 1)) * 100)}% OF GOAL` : 'NO SAVED DATA'}</Text>
+                  <View style={styles.expandedDayGoalRow}>
+                    <Text style={styles.expandedDayCaption}>DAILY GOAL</Text>
+                    <Text style={styles.expandedDayGoal}>{selectedDay.goal.toLocaleString('en-US')}</Text>
+                  </View>
                 </View>
                 <View style={styles.weekDetailHourly}>
                   {selectedDay.hasRecord && hourlyData?.date === selectedDay.date && hourlyData.hasData ? (
