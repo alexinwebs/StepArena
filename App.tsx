@@ -196,6 +196,7 @@ const ORANGE = '#FF482F';
 let LINE = '#E3E1DC';
 let SURFACE = '#FFFFFF';
 let DARK_SURFACE = '#202024';
+let CHALLENGE_ACTION_SURFACE = '#202024';
 let SOFT_SURFACE = '#EEECE7';
 let TRACK = '#ECEAE6';
 let AVATAR_SURFACE = '#E9E6E0';
@@ -1327,6 +1328,7 @@ export default function App() {
   LINE = isDark ? '#343237' : '#E3E1DC';
   SURFACE = isDark ? '#202024' : '#FFFFFF';
   DARK_SURFACE = '#202024';
+  CHALLENGE_ACTION_SURFACE = isDark ? '#38363D' : '#202024';
   SOFT_SURFACE = isDark ? '#2B292E' : '#EEECE7';
   TRACK = isDark ? '#343237' : '#ECEAE6';
   AVATAR_SURFACE = isDark ? '#343237' : '#E9E6E0';
@@ -2665,7 +2667,7 @@ function createStyles() {
     minHeight: 46,
     paddingHorizontal: 16,
     borderRadius: 24,
-    backgroundColor: DARK_SURFACE,
+    backgroundColor: CHALLENGE_ACTION_SURFACE,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
