@@ -442,6 +442,7 @@ function HomeScreen({
   // A single native-driven value animates the selected day. The seven columns
   // themselves never change width, so selecting a day cannot reflow the row.
   const selectedDayProgress = useRef(new Animated.Value(0)).current;
+  const weekDetailHeight = useRef(new Animated.Value(0)).current;
   const weekBarEntranceValues = useRef(
     Array.from({ length: 7 }, () => new Animated.Value(0)),
   ).current;
@@ -481,12 +482,23 @@ function HomeScreen({
     };
   }, [selectedDate, hourlyData?.date, hourlyData?.hours, hourlyData?.hasData]);
   const animateSelectedDay = (next: number, onFinished?: () => void) => {
-    Animated.timing(selectedDayProgress, {
-      toValue: next,
-      duration: next === 1 ? 260 : 170,
-      easing: next === 1 ? Easing.out(Easing.cubic) : Easing.in(Easing.cubic),
-      useNativeDriver: true,
-    }).start(({ finished }) => {
+    const duration = next === 1 ? 260 : 210;
+    const easing = next === 1 ? Easing.out(Easing.cubic) : Easing.in(Easing.cubic);
+
+    Animated.parallel([
+      Animated.timing(selectedDayProgress, {
+        toValue: next,
+        duration,
+        easing,
+        useNativeDriver: true,
+      }),
+      Animated.timing(weekDetailHeight, {
+        toValue: next === 1 ? 112 : 0,
+        duration,
+        easing,
+        useNativeDriver: false,
+      }),
+    ]).start(({ finished }) => {
       if (finished) onFinished?.();
     });
   };
@@ -635,11 +647,11 @@ function HomeScreen({
       <View style={[styles.sectionHeading, { marginBottom: 12 }]}>
         <Text style={styles.sectionTitle}>Your week</Text>
         <View style={styles.weekNavigator}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Previous week" onPress={() => { setWeekOffset((value) => value - 1); setSelectedDate(null); selectedDayProgress.setValue(0); }} style={styles.weekArrow}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Previous week" onPress={() => { setWeekOffset((value) => value - 1); setSelectedDate(null); selectedDayProgress.setValue(0); weekDetailHeight.setValue(0); }} style={styles.weekArrow}>
             <ChevronLeft size={17} color={INK} />
           </Pressable>
           <Text style={styles.weekRange}>{formatShortDate(weekStart)} – {formatShortDate(weekEnd)}</Text>
-          <Pressable accessibilityRole="button" accessibilityLabel="Next week" disabled={weekOffset >= 0} onPress={() => { setWeekOffset((value) => Math.min(0, value + 1)); setSelectedDate(null); selectedDayProgress.setValue(0); }} style={[styles.weekArrow, weekOffset >= 0 && { opacity: 0.28 }]}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Next week" disabled={weekOffset >= 0} onPress={() => { setWeekOffset((value) => Math.min(0, value + 1)); setSelectedDate(null); selectedDayProgress.setValue(0); weekDetailHeight.setValue(0); }} style={[styles.weekArrow, weekOffset >= 0 && { opacity: 0.28 }]}>
             <ChevronRight size={17} color={INK} />
           </Pressable>
         </View>
@@ -700,7 +712,26 @@ function HomeScreen({
             );
           })}
         </View>
-        <View style={styles.weekDetailSlot}>
+        <Animated.View
+          style={[
+            styles.weekDetailSlot,
+            {
+              height: weekDetailHeight,
+              marginTop: weekDetailHeight.interpolate({
+                inputRange: [0, 112],
+                outputRange: [0, 8],
+              }),
+              paddingTop: weekDetailHeight.interpolate({
+                inputRange: [0, 112],
+                outputRange: [0, 8],
+              }),
+              borderTopWidth: weekDetailHeight.interpolate({
+                inputRange: [0, 112],
+                outputRange: [0, 1],
+              }),
+            },
+          ]}
+        >
           {selectedDay ? (
             <Animated.View
               pointerEvents="auto"
@@ -750,7 +781,7 @@ function HomeScreen({
           ) : (
             <Text style={styles.weekDetailPlaceholder}>Select a day to view its activity</Text>
           )}
-        </View>
+        </Animated.View>
       </View>
       <View style={styles.weekSummary}>
         <View><Text style={styles.weekSummaryValue}>{completedDays}/{visibleDays.length}</Text><Text style={styles.smallMuted}>GOALS REACHED</Text></View>
@@ -2369,12 +2400,11 @@ function createStyles() {
     paddingBottom: 12,
     backgroundColor: SURFACE,
     overflow: 'hidden',
-    minHeight: 244,
   },
   weekPointsRow: { flexDirection: 'row', alignItems: 'stretch', gap: 4, height: 103 },
   weekColumnAnimated: { flex: 1, minWidth: 0 },
   weekColumn: { flex: 1, alignItems: 'stretch', borderRadius: 11, overflow: 'visible', paddingHorizontal: 4, paddingTop: 7, paddingBottom: 6, backgroundColor: 'transparent' },
-  weekDetailSlot: { height: 112, marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: LINE, justifyContent: 'center', overflow: 'hidden' },
+  weekDetailSlot: { borderTopColor: LINE, justifyContent: 'center', overflow: 'hidden' },
   weekDetailContent: { flex: 1, justifyContent: 'center', paddingHorizontal: 5 },
   weekDetailHeading: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   weekDetailStats: { width: '40%', justifyContent: 'center' },
