@@ -445,12 +445,46 @@ function HomeScreen({
   const weekBarEntranceValues = useRef(
     Array.from({ length: 7 }, () => new Animated.Value(0)),
   ).current;
+  const hourlyBarValues = useRef(
+    Array.from({ length: 24 }, () => new Animated.Value(0)),
+  ).current;
+
+  useEffect(() => {
+    hourlyBarValues.forEach((value) => {
+      value.stopAnimation();
+      value.setValue(0);
+    });
+
+    if (!selectedDate || hourlyData?.date !== selectedDate || !hourlyData.hasData) {
+      return;
+    }
+
+    const activeAnimations = hourlyData.hours
+      .map((count, hour) => {
+        if (count <= 0) return null;
+
+        return Animated.timing(hourlyBarValues[hour], {
+          toValue: 1,
+          duration: 420,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: false,
+        });
+      })
+      .filter((animation): animation is Animated.CompositeAnimation => animation !== null);
+
+    if (activeAnimations.length > 0) {
+      Animated.stagger(26, activeAnimations).start();
+    }
+
+    return () => {
+      hourlyBarValues.forEach((value) => value.stopAnimation());
+    };
+  }, [selectedDate, hourlyData?.date, hourlyData?.hours, hourlyData?.hasData]);
   const animateSelectedDay = (next: number, onFinished?: () => void) => {
-    Animated.spring(selectedDayProgress, {
+    Animated.timing(selectedDayProgress, {
       toValue: next,
-      stiffness: 190,
-      damping: 22,
-      mass: 0.85,
+      duration: next === 1 ? 260 : 170,
+      easing: next === 1 ? Easing.out(Easing.cubic) : Easing.in(Easing.cubic),
       useNativeDriver: true,
     }).start(({ finished }) => {
       if (finished) onFinished?.();
@@ -628,7 +662,7 @@ function HomeScreen({
               }
             };
             const barScale = selected
-              ? selectedDayProgress.interpolate({ inputRange: [0, 1], outputRange: [1, 2.45] })
+              ? selectedDayProgress.interpolate({ inputRange: [0, 1], outputRange: [1, 1.5] })
               : 1;
             return (
               <View key={item.date} style={styles.weekColumnAnimated}>
@@ -638,7 +672,7 @@ function HomeScreen({
                   accessibilityLabel={`${formatShortDate(item.date)}, ${item.hasRecord ? `${item.steps.toLocaleString('en-US')} steps` : 'no saved activity'}`}
                   disabled={item.isFuture}
                   onPress={selectDay}
-                  style={({ pressed }) => [styles.weekColumn, selected && styles.weekColumnSelected, selected && { backgroundColor: SOFT_SURFACE, borderColor: LINE }, pressed && styles.weekColumnPressed]}
+                  style={({ pressed }) => [styles.weekColumn, pressed && styles.weekColumnPressed]}
                 >
                   <View style={styles.weekColumnTop}>
                     <Text style={[styles.weekDay, fixedPoint && styles.anchorDay, item.isToday && { color: ORANGE, fontWeight: '800' }, selected && { color: ORANGE }]}>{item.day}</Text>
@@ -676,7 +710,7 @@ function HomeScreen({
               }]}
             >
               <View style={styles.weekDetailHeading}>
-                <View>
+                <View style={styles.weekDetailStats}>
                   <Text style={styles.expandedDayDate}>{formatShortDate(selectedDay.date)}</Text>
                   <Text style={styles.expandedDaySteps}>{selectedDay.hasRecord ? selectedDay.steps.toLocaleString('en-US') : '—'}</Text>
                   <Text style={styles.expandedDayCaption}>STEPS · {selectedDay.hasRecord ? `${Math.round((selectedDay.steps / Math.max(selectedDay.goal, 1)) * 100)}% OF GOAL` : 'NO SAVED DATA'}</Text>
@@ -687,7 +721,23 @@ function HomeScreen({
                       {hourlyData.hours.map((count, hour) => {
                         const peak = Math.max(1, ...hourlyData.hours);
                         const peakHour = count > 0 && count === peak;
-                        return <View key={hour} style={styles.miniHourlyTrack}><View style={[styles.miniHourlyBar, { height: `${Math.max(count > 0 ? 9 : 0, (count / peak) * 100)}%`, backgroundColor: peakHour ? ORANGE : count > 0 ? MUTED : TRACK }]} /></View>;
+                        const targetHeight = count > 0 ? Math.max(9, (count / peak) * 100) : 0;
+                        return (
+                          <View key={hour} style={styles.miniHourlyTrack}>
+                            <Animated.View
+                              style={[
+                                styles.miniHourlyBar,
+                                {
+                                  height: hourlyBarValues[hour].interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange: ['0%', `${targetHeight}%`],
+                                  }),
+                                  backgroundColor: peakHour ? ORANGE : MUTED,
+                                },
+                              ]}
+                            />
+                          </View>
+                        );
                       })}
                     </View>
                   ) : (
@@ -2319,16 +2369,16 @@ function createStyles() {
     paddingBottom: 12,
     backgroundColor: SURFACE,
     overflow: 'hidden',
-    minHeight: 206,
+    minHeight: 244,
   },
   weekPointsRow: { flexDirection: 'row', alignItems: 'stretch', gap: 4, height: 103 },
   weekColumnAnimated: { flex: 1, minWidth: 0 },
   weekColumn: { flex: 1, alignItems: 'stretch', borderRadius: 11, overflow: 'visible', paddingHorizontal: 4, paddingTop: 7, paddingBottom: 6, backgroundColor: 'transparent' },
-  weekColumnSelected: { paddingHorizontal: 4, borderWidth: 1 },
-  weekDetailSlot: { height: 74, marginTop: 5, borderTopWidth: 1, borderTopColor: LINE, justifyContent: 'center', overflow: 'hidden' },
+  weekDetailSlot: { height: 112, marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: LINE, justifyContent: 'center', overflow: 'hidden' },
   weekDetailContent: { flex: 1, justifyContent: 'center', paddingHorizontal: 5 },
-  weekDetailHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  weekDetailHourly: { width: '48%', alignItems: 'stretch', justifyContent: 'center' },
+  weekDetailHeading: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  weekDetailStats: { width: '40%', justifyContent: 'center' },
+  weekDetailHourly: { flex: 1, minWidth: 0, alignItems: 'stretch', justifyContent: 'center' },
   weekDetailPlaceholder: { color: MUTED, fontSize: 10, letterSpacing: 0.3, textAlign: 'center' },
   weekColumnPressed: { opacity: 0.82 },
   weekColumnTop: { alignItems: 'center', gap: 7 },
@@ -2336,13 +2386,13 @@ function createStyles() {
   barTrack: { height: 58, width: 13, backgroundColor: TRACK, borderRadius: 8, justifyContent: 'flex-end', overflow: 'hidden' },
   barTrackExpanded: { height: 58, width: 13 },
   expandedDayContent: { marginTop: 9, gap: 1, overflow: 'hidden' },
-  expandedDayDate: { color: MUTED, fontSize: 9, fontWeight: '700', letterSpacing: 0.5 },
-  expandedDaySteps: { color: INK, fontSize: 20, fontWeight: '400', fontVariant: ['tabular-nums'], marginTop: 3 },
-  expandedDayCaption: { color: MUTED, fontSize: 7, letterSpacing: 0.9, fontWeight: '700' },
+  expandedDayDate: { color: MUTED, fontSize: 11, fontWeight: '700', letterSpacing: 0.4 },
+  expandedDaySteps: { color: INK, fontSize: 25, fontWeight: '500', fontVariant: ['tabular-nums'], marginTop: 4 },
+  expandedDayCaption: { color: MUTED, fontSize: 9, letterSpacing: 0.65, fontWeight: '700' },
   expandedDayGoalRow: { flexDirection: 'row', alignItems: 'baseline', gap: 5, marginTop: 3 },
   expandedDayGoal: { color: ORANGE, fontSize: 12, fontWeight: '700' },
-  expandedDayHint: { color: MUTED, fontSize: 7, letterSpacing: 0.2, marginTop: 5 },
-  miniHourlyBars: { height: 25, flexDirection: 'row', alignItems: 'flex-end', gap: 1, marginTop: 7 },
+  expandedDayHint: { color: MUTED, fontSize: 10, letterSpacing: 0.2, marginTop: 5 },
+  miniHourlyBars: { height: 44, flexDirection: 'row', alignItems: 'flex-end', gap: 3, marginTop: 8 },
   miniHourlyTrack: { flex: 1, height: '100%', justifyContent: 'flex-end', backgroundColor: TRACK, borderRadius: 2, overflow: 'hidden' },
   miniHourlyBar: { width: '100%', borderRadius: 2 },
   dayDot: { width: 3, height: 3, borderRadius: 2, backgroundColor: 'transparent' },
