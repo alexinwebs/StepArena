@@ -953,6 +953,13 @@ function ChallengesScreen({
                 ? streakDays
                 : goalDays;
           const progress = unlocked ? 1 : Math.min(progressValue / achievement.threshold, 1);
+          const progressUnit =
+            achievement.kind === 'steps'
+              ? 'steps'
+              : achievement.kind === 'streak'
+                ? 'days'
+                : 'goal days';
+          const progressCount = Math.min(progressValue, achievement.threshold);
 
           return (
             <Pressable
@@ -981,24 +988,31 @@ function ChallengesScreen({
               <View style={{ flex: 1, gap: 3 }}>
                 <Text style={styles.personName}>{achievement.title}</Text>
                 <Text style={styles.smallMuted}>{achievement.description}</Text>
-                <View
-                  style={{
-                    height: 4,
-                    backgroundColor: TRACK,
-                    borderRadius: 4,
-                    overflow: 'hidden',
-                    marginTop: 4,
-                  }}
-                >
+                {!unlocked && (
+                  <Text style={styles.smallMuted}>
+                    {progressCount.toLocaleString('en-US')} / {achievement.threshold.toLocaleString('en-US')} {progressUnit}
+                  </Text>
+                )}
+                {!unlocked && (
                   <View
                     style={{
                       height: 4,
-                      width: `${progress * 100}%`,
-                      backgroundColor: unlocked ? ORANGE : MUTED,
+                      backgroundColor: TRACK,
                       borderRadius: 4,
+                      overflow: 'hidden',
+                      marginTop: 4,
                     }}
-                  />
-                </View>
+                  >
+                    <View
+                      style={{
+                        height: 4,
+                        width: `${progress * 100}%`,
+                        backgroundColor: MUTED,
+                        borderRadius: 4,
+                      }}
+                    />
+                  </View>
+                )}
               </View>
               <Text
                 style={[
