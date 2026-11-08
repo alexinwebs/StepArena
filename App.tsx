@@ -1153,7 +1153,7 @@ function ChallengesScreen({
 }
 
 function ProfileScreen({
-  badgeCount,
+  earnedBadgeIds,
   records,
   appearance,
   onAppearancePress,
@@ -1162,7 +1162,7 @@ function ProfileScreen({
   onHealthPreferencesPress,
   onSettingsPress,
 }: {
-  badgeCount: number;
+  earnedBadgeIds: string[];
   records: ReturnType<typeof calculatePersonalRecords>;
   appearance: ThemePreference;
   onAppearancePress: () => void;
@@ -1187,17 +1187,67 @@ function ProfileScreen({
 
       <View style={styles.profileHero}>
         <View style={styles.profileAvatar}>
-          <UserRound size={32} color={INK} />
+          <UserRound size={29} color={INK} />
         </View>
-        <Text style={styles.profileName}>StepArena</Text>
-        <Text style={styles.profileHandle}>PERSONAL ACTIVITY</Text>
-        <Text style={styles.profileHint}>
-          Your journey, one step at a time.
-        </Text>
+        <View style={styles.profileHeroCopy}>
+          <Text style={styles.profileName}>StepArena</Text>
+          <Text style={styles.profileHandle}>PERSONAL ACTIVITY</Text>
+        </View>
       </View>
 
-      <View style={[styles.profileStats, { justifyContent: 'center' }]}>
-        <Metric value={String(badgeCount).padStart(2, '0')} label="BADGES EARNED" />
+      <View style={styles.profileAchievements}>
+        <View style={styles.profileAchievementsHeading}>
+          <View>
+            <Text style={styles.sectionTitle}>Achievements</Text>
+            <Text style={styles.smallMuted}>
+              {earnedBadgeIds.length} earned
+            </Text>
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="View all achievements"
+            onPress={onAchievementsPress}
+            style={({ pressed }) => [
+              styles.profileViewAll,
+              pressed && styles.pressed,
+            ]}
+          >
+            <Text style={styles.profileViewAllText}>View all</Text>
+            <ArrowRight size={15} color={ORANGE} />
+          </Pressable>
+        </View>
+
+        {earnedBadgeIds.length > 0 ? (
+          <View style={styles.profileBadgeList}>
+            {ACHIEVEMENTS
+              .filter((achievement) => earnedBadgeIds.includes(achievement.id))
+              .slice(0, 3)
+              .map((achievement) => (
+                <View key={achievement.id} style={styles.profileBadgeItem}>
+                  <View style={styles.profileBadgeIcon}>
+                    {achievement.kind === 'streak' ? (
+                      <Trophy size={19} color={ORANGE} />
+                    ) : (
+                      <Footprints size={19} color={ORANGE} />
+                    )}
+                  </View>
+                  <Text
+                    style={styles.profileBadgeTitle}
+                    numberOfLines={2}
+                    ellipsizeMode="tail"
+                  >
+                    {achievement.title}
+                  </Text>
+                </View>
+              ))}
+          </View>
+        ) : (
+          <View style={styles.profileEmptyAchievements}>
+            <Text style={styles.smallMuted}>
+              Your first milestone is waiting. Keep moving to earn a badge.
+            </Text>
+          </View>
+        )}
       </View>
 
       <View style={styles.sectionHeading}>
@@ -1216,13 +1266,13 @@ function ProfileScreen({
         <View style={{ flexDirection: 'row', gap: 12 }}>
           <View style={{ flex: 1 }}>
             <Text style={styles.smallMuted}>TOTAL STEPS</Text>
-            <Text style={styles.recordValue}>
+            <Text style={styles.recordPrimaryValue}>
               {records.totalSteps.toLocaleString('en-US')}
             </Text>
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.smallMuted}>BEST DAY</Text>
-            <Text style={styles.recordValue}>
+            <Text style={styles.recordPrimaryValue}>
               {records.bestDay.toLocaleString('en-US')}
             </Text>
           </View>
@@ -1233,13 +1283,13 @@ function ProfileScreen({
         <View style={{ flexDirection: 'row', gap: 12 }}>
           <View style={{ flex: 1 }}>
             <Text style={styles.smallMuted}>LONGEST STREAK</Text>
-            <Text style={styles.recordValue}>
+            <Text style={styles.recordSecondaryValue}>
               {records.longestStreak} {records.longestStreak === 1 ? 'day' : 'days'}
             </Text>
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.smallMuted}>GOAL DAYS</Text>
-            <Text style={styles.recordValue}>{records.goalDays}</Text>
+            <Text style={styles.recordSecondaryValue}>{records.goalDays}</Text>
           </View>
         </View>
 
@@ -1249,41 +1299,45 @@ function ProfileScreen({
       </View>
 
       {[
-        [Activity, 'Activity history', 'Your steps and personal records'],
-        [Trophy, 'Achievements', 'Your milestones and streaks'],
-        [Heart, 'Health preferences', 'Your goals and permissions'],
-        [Moon, 'Appearance', 'Light and dark mode'],
-        [Settings, 'Settings', 'Privacy, account and support'],
-      ].map(([Icon, title, subtitle]: any) => (
-        <Pressable
-          key={title}
-          accessibilityRole="button"
-          accessibilityLabel={`${title}. ${title === 'Appearance' ? `Current setting: ${appearance}. Change appearance` : subtitle}`}
-          onPress={
-            title === 'Appearance' ? onAppearancePress
-              : title === 'Activity history' ? onActivityHistoryPress
-                : title === 'Achievements' ? onAchievementsPress
-                  : title === 'Health preferences' ? onHealthPreferencesPress
-                    : onSettingsPress
-          }
-          style={({ pressed }) => [
-            styles.settingRow,
-            pressed && styles.pressed,
-          ]}
-        >
-          <View style={styles.settingIcon}>
-            <Icon size={19} color={INK} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.personName}>{title}</Text>
-            <Text style={styles.smallMuted}>
-              {title === 'Appearance'
-                ? `${appearance === 'system' ? 'System default' : appearance === 'dark' ? 'Dark mode' : 'Light mode'} · Tap to change`
-                : subtitle}
-            </Text>
-          </View>
-          <ArrowRight size={17} color={MUTED} />
-        </Pressable>
+        [Activity, 'Activity history', 'Your steps and personal records', 'YOUR ACTIVITY'],
+        [Trophy, 'Achievements', 'Your milestones and streaks', null],
+        [Heart, 'Health preferences', 'Your goals and permissions', 'PREFERENCES'],
+        [Moon, 'Appearance', 'Light and dark mode', null],
+        [Settings, 'Settings', 'Privacy, account and support', 'APP'],
+      ].map(([Icon, title, subtitle, group]: any) => (
+        <View key={title}>
+          {group && (
+            <Text style={styles.profileGroupLabel}>{group}</Text>
+          )}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`${title}. ${title === 'Appearance' ? `Current setting: ${appearance}. Change appearance` : subtitle}`}
+            onPress={
+              title === 'Appearance' ? onAppearancePress
+                : title === 'Activity history' ? onActivityHistoryPress
+                  : title === 'Achievements' ? onAchievementsPress
+                    : title === 'Health preferences' ? onHealthPreferencesPress
+                      : onSettingsPress
+            }
+            style={({ pressed }) => [
+              styles.settingRow,
+              pressed && styles.pressed,
+            ]}
+          >
+            <View style={styles.settingIcon}>
+              <Icon size={19} color={INK} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.personName}>{title}</Text>
+              <Text style={styles.smallMuted}>
+                {title === 'Appearance'
+                  ? `${appearance === 'system' ? 'System default' : appearance === 'dark' ? 'Dark mode' : 'Light mode'} · Tap to change`
+                  : subtitle}
+              </Text>
+            </View>
+            <ArrowRight size={17} color={MUTED} />
+          </Pressable>
+        </View>
       ))}
     </ScrollView>
   );
@@ -2067,7 +2121,7 @@ export default function App() {
     ),
     Profile: (
       <ProfileScreen
-        badgeCount={earnedBadgeIds.length}
+        earnedBadgeIds={earnedBadgeIds}
         records={personalRecords}
         appearance={themePreference}
         onAppearancePress={openAppearancePicker}
@@ -2707,11 +2761,19 @@ function createStyles() {
     justifyContent: 'space-between',
   },
   lightButtonText: { color: DARK_SURFACE, fontSize: 12, fontWeight: '500' },
-  recordValue: {
+  recordPrimaryValue: {
     color: INK,
-    fontSize: 23,
+    fontSize: 27,
     fontWeight: '400',
-    letterSpacing: -0.6,
+    letterSpacing: -0.8,
+    marginTop: 7,
+    fontVariant: ['tabular-nums'],
+  },
+  recordSecondaryValue: {
+    color: INK,
+    fontSize: 20,
+    fontWeight: '400',
+    letterSpacing: -0.4,
     marginTop: 5,
     fontVariant: ['tabular-nums'],
   },
@@ -2732,19 +2794,83 @@ function createStyles() {
     justifyContent: 'center',
   },
   achievementStatus: { color: MUTED, fontSize: 9, letterSpacing: 1 },
-  profileHero: { alignItems: 'center', paddingTop: 28, paddingBottom: 30 },
+  profileHero: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    paddingTop: 8,
+    paddingBottom: 22,
+  },
+  profileHeroCopy: {
+    flex: 1,
+    gap: 5,
+  },
   profileAvatar: {
-    width: 86,
-    height: 86,
-    borderRadius: 43,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: AVATAR_SURFACE,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 14,
   },
-  profileName: { fontSize: 23, color: INK, fontWeight: '400' },
-  profileHandle: { color: MUTED, fontSize: 12, marginTop: 6 },
-  profileHint: { color: MUTED, fontSize: 11, marginTop: 14 },
+  profileName: { fontSize: 21, color: INK, fontWeight: '400' },
+  profileHandle: { color: MUTED, fontSize: 11, letterSpacing: 0.8 },
+  profileAchievements: {
+    marginBottom: 8,
+  },
+  profileAchievementsHeading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  profileViewAll: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingVertical: 7,
+    paddingLeft: 8,
+  },
+  profileViewAllText: {
+    color: ORANGE,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  profileBadgeList: {
+    flexDirection: 'row',
+    gap: 9,
+  },
+  profileBadgeItem: {
+    flex: 1,
+    minWidth: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 13,
+    borderRadius: 13,
+    backgroundColor: SURFACE,
+  },
+  profileBadgeIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: ACCENT_SOFT,
+  },
+  profileBadgeTitle: {
+    color: INK,
+    fontSize: 10,
+    fontWeight: '500',
+    textAlign: 'center',
+    lineHeight: 14,
+  },
+  profileEmptyAchievements: {
+    padding: 15,
+    borderRadius: 13,
+    backgroundColor: SURFACE,
+  },
   profileStats: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2753,6 +2879,14 @@ function createStyles() {
     borderBottomWidth: 1,
     borderColor: LINE,
     marginBottom: 17,
+  },
+  profileGroupLabel: {
+    color: MUTED,
+    fontSize: 9,
+    fontWeight: '600',
+    letterSpacing: 1.7,
+    marginTop: 23,
+    marginBottom: 3,
   },
   settingRow: {
     flexDirection: 'row',
