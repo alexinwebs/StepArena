@@ -194,6 +194,7 @@ let WHITE = '#FBFAFB';
 let MUTED = '#77746F';
 const ORANGE = '#FF482F';
 let LINE = '#E3E1DC';
+let DOT_EMPTY_BORDER = '#D5D1CA';
 let SURFACE = '#FFFFFF';
 let DARK_SURFACE = '#202024';
 let CHALLENGE_ACTION_SURFACE = '#202024';
@@ -330,16 +331,17 @@ function ProgressRing({
   );
 }
 
-function Dots({ count = 7 }: { count?: number }) {
+function Dots({ streakDays }: { streakDays: number }) {
+  const completedDots = Math.min(Math.max(streakDays, 0), 7);
+
   return (
     <View style={styles.dots}>
-      {Array.from({ length: count }).map((_, i) => (
+      {Array.from({ length: 7 }).map((_, i) => (
         <View
           key={i}
           style={[
             styles.dot,
-            i === count - 1 && styles.dotActive,
-            i > count - 1 && styles.dotEmpty,
+            i < completedDots ? styles.dotActive : styles.dotEmpty,
           ]}
         />
       ))}
@@ -629,7 +631,7 @@ function HomeScreen({
 
 
         <View style={styles.progressSection}>
-          <ProgressRing progress={Math.min(steps / goal, 1)} size={width * 0.42} animate={introComplete} />
+          <ProgressRing progress={Math.min(steps / goal, 1)} size={width * 0.34} animate={introComplete} />
           <View style={styles.progressCopy}>
             <Label>REMAINING TODAY</Label>
             <Text style={styles.remaining}>
@@ -637,9 +639,10 @@ function HomeScreen({
             </Text>
             <Text style={styles.smallMuted}>steps remaining</Text>
             <View style={styles.thinLine} />
-            <Text style={styles.progressNote}>
-              {steps >= goal ? 'Daily goal completed ✓' : 'Keep your momentum.'}
-            </Text>
+            <View style={styles.dailyGoalRow}>
+              <Text style={styles.smallMuted}>DAILY GOAL</Text>
+              <Text style={styles.dailyGoalValue}>{goal.toLocaleString('en-US')}</Text>
+            </View>
           </View>
         </View>
       </View>
@@ -706,7 +709,7 @@ function HomeScreen({
                         />
                       </View>
                     </Animated.View>
-                    <Text style={[styles.weekStepsTiny, selected && { color: ORANGE, fontWeight: '800' }]}>{item.hasRecord ? `${Math.round(progress * 100)}%` : '—'}</Text>
+                    <Text style={[styles.weekStepsTiny, selected && { color: ORANGE, fontWeight: '800' }]}>{item.hasRecord ? `${item.completed ? 100 : Math.min(Math.floor(progress * 100), 99)}%` : '—'}</Text>
                   </View>
                 </Pressable>
               </View>
@@ -803,7 +806,7 @@ function HomeScreen({
           <Text style={styles.streakNumber}>{String(streakDays).padStart(2, "0")} DAYS</Text>
           <Text style={styles.smallMuted}>Consecutive days meeting your target.</Text>
         </View>
-        <Dots />
+        <Dots streakDays={streakDays} />
       </View>
 
       <Modal visible={showGoal} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowGoal(false)}>
@@ -1380,6 +1383,7 @@ export default function App() {
   WHITE = '#FBFAFB';
   MUTED = isDark ? '#AAA7AE' : '#77746F';
   LINE = isDark ? '#343237' : '#E3E1DC';
+  DOT_EMPTY_BORDER = isDark ? '#77717B' : '#B8B2AA';
   SURFACE = isDark ? '#202024' : '#FFFFFF';
   DARK_SURFACE = '#202024';
   CHALLENGE_ACTION_SURFACE = isDark ? '#38363D' : '#202024';
@@ -2414,8 +2418,8 @@ function createStyles() {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 27,
-    gap: 15,
+    marginTop: 22,
+    gap: 18,
   },
   ringCenter: {
     ...StyleSheet.absoluteFill,
@@ -2432,13 +2436,25 @@ function createStyles() {
   progressCopy: { flex: 1, gap: 5 },
   remaining: {
     color: INK,
-    fontSize: 30,
+    fontSize: 27,
     fontWeight: '300',
     letterSpacing: -1,
     marginTop: 7,
   },
   thinLine: { height: 1, backgroundColor: LINE, marginVertical: 10 },
   progressNote: { fontSize: 11, color: INK },
+  dailyGoalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  dailyGoalValue: {
+    color: INK,
+    fontSize: 13,
+    fontWeight: '600',
+    fontVariant: ['tabular-nums'],
+  },
   metric: { flex: 1, alignItems: 'center', gap: 3 },
   metricValue: { fontSize: 23, color: INK, fontWeight: '300' },
   metricDivider: { height: 28, width: 1, backgroundColor: LINE },
@@ -2454,14 +2470,14 @@ function createStyles() {
   weekArrow: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: SURFACE },
   weekRange: { color: MUTED, fontSize: 10, fontWeight: '600', fontVariant: ['tabular-nums'] },
   weekCard: {
-    borderRadius: 17,
-    paddingHorizontal: 12,
-    paddingTop: 15,
-    paddingBottom: 12,
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    paddingTop: 16,
+    paddingBottom: 13,
     backgroundColor: SURFACE,
     overflow: 'hidden',
   },
-  weekPointsRow: { flexDirection: 'row', alignItems: 'stretch', gap: 4, height: 103 },
+  weekPointsRow: { flexDirection: 'row', alignItems: 'stretch', gap: 4, height: 112 },
   weekColumnAnimated: { flex: 1, minWidth: 0 },
   weekColumn: { flex: 1, alignItems: 'stretch', borderRadius: 11, overflow: 'visible', paddingHorizontal: 4, paddingTop: 7, paddingBottom: 6, backgroundColor: 'transparent' },
   weekDetailSlot: { borderTopColor: LINE, justifyContent: 'center', overflow: 'hidden' },
@@ -2471,9 +2487,9 @@ function createStyles() {
   weekDetailHourly: { flex: 1, minWidth: 0, alignItems: 'stretch', justifyContent: 'center' },
   weekDetailPlaceholder: { color: MUTED, fontSize: 10, letterSpacing: 0.3, textAlign: 'center' },
   weekColumnPressed: { opacity: 0.82 },
-  weekColumnTop: { alignItems: 'center', gap: 7 },
+  weekColumnTop: { alignItems: 'center', gap: 8 },
   weekColumnTopExpanded: { alignItems: 'center', gap: 7 },
-  barTrack: { height: 58, width: 13, backgroundColor: TRACK, borderRadius: 8, justifyContent: 'flex-end', overflow: 'hidden' },
+  barTrack: { height: 64, width: 15, backgroundColor: TRACK, borderRadius: 8, justifyContent: 'flex-end', overflow: 'hidden' },
   barTrackExpanded: { height: 58, width: 13 },
   expandedDayContent: { marginTop: 9, gap: 1, overflow: 'hidden' },
   expandedDayDate: { color: MUTED, fontSize: 11, fontWeight: '700', letterSpacing: 0.4 },
@@ -2489,7 +2505,7 @@ function createStyles() {
   dayDotAnchor: { width: 3, height: 3, borderRadius: 2, backgroundColor: 'transparent' },
   dayDotToday: { backgroundColor: ORANGE },
   dayDotSelected: { width: 7, height: 7, backgroundColor: ORANGE },
-  weekStepsTiny: { color: MUTED, fontSize: 8, fontVariant: ['tabular-nums'] },
+  weekStepsTiny: { color: MUTED, fontSize: 9, fontVariant: ['tabular-nums'] },
   anchorDay: { fontWeight: '800', color: INK },
   inlineDayDetail: { marginTop: 12, paddingTop: 12, gap: 11 },
   detailTopLine: { height: 1, backgroundColor: LINE, marginBottom: 1 },
@@ -2525,10 +2541,10 @@ function createStyles() {
   hourlyEmptyTitle: { color: INK, fontSize: 13, fontWeight: '500' },
   hourlyMessage: { color: MUTED, fontSize: 10, lineHeight: 16 },
   dayDetailStatus: { color: ORANGE, fontSize: 9, letterSpacing: 1, fontWeight: '700' },
-  weekSummary: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 13 },
-  weekSummaryValue: { color: INK, fontSize: 17, fontWeight: '500', fontVariant: ['tabular-nums'] },
+  weekSummary: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 15 },
+  weekSummaryValue: { color: INK, fontSize: 18, fontWeight: '500', fontVariant: ['tabular-nums'] },
   bar: { width: '100%', borderRadius: 9 },
-  weekDay: { fontSize: 10, color: MUTED },
+  weekDay: { fontSize: 11, color: MUTED },
   darkFeature: {
     marginTop: 17,
     backgroundColor: DARK_SURFACE,
@@ -2560,8 +2576,8 @@ function createStyles() {
   streakNumber: { color: INK, fontSize: 22, marginBottom: 5 },
   dots: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: INK },
-  dotActive: { backgroundColor: ORANGE, width: 10, height: 10, borderRadius: 5 },
-  dotEmpty: { backgroundColor: 'transparent', borderWidth: 1, borderColor: LINE },
+  dotActive: { backgroundColor: ORANGE, width: 8, height: 8, borderRadius: 4 },
+  dotEmpty: { backgroundColor: 'transparent', borderWidth: 1, borderColor: DOT_EMPTY_BORDER },
   pageTitle: {
     fontSize: 38,
     lineHeight: 46,
