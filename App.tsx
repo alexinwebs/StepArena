@@ -168,6 +168,7 @@ import {
   useColorScheme,
   Modal,
   TextInput,
+  BackHandler,
 } from 'react-native';
 
 import {
@@ -1445,6 +1446,7 @@ export default function App() {
   };
 
   const [activeTab, setActiveTab] = useState<Tab>('Home');
+  const [showSettings, setShowSettings] = useState(false);
   const [dailySteps, setDailySteps] = useState(0);
   const dailyStepsRef = useRef(0);
   const [dailyGoal, setDailyGoal] = useState(DEFAULT_DAILY_GOAL);
@@ -2026,6 +2028,34 @@ export default function App() {
     return () => animation.stop();
   }, [activeTab, navIndicatorScale]);
 
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener(
+      'hardwareBackPress',
+      () => {
+        if (celebrationAchievement) {
+          setCelebrationAchievement(null);
+          return true;
+        }
+
+        if (showIntro) return true;
+
+        if (showSettings) {
+          setShowSettings(false);
+          return true;
+        }
+
+        if (activeTab !== 'Home') {
+          navigate('Home');
+          return true;
+        }
+
+        return false;
+      },
+    );
+
+    return () => subscription.remove();
+  }, [activeTab, showSettings, celebrationAchievement, showIntro]);
+
   const navigate = (tab: Tab) => {
     if (tab === activeTab || busy.current) return;
     busy.current = true;
@@ -2096,19 +2126,8 @@ export default function App() {
     );
   };
 
-  const openSettings = () => {
-    Alert.alert('Settings', 'StepArena settings', [
-      {
-        text: 'Privacy',
-        onPress: () => showMessage('Privacy', 'Your step history, daily goal and achievements are stored locally on this device. Online rankings and friend features are not currently available.'),
-      },
-      {
-        text: 'Support',
-        onPress: () => showMessage('Support', 'For now, you can review app status and local data here. No support account or online support service is connected.'),
-      },
-      { text: 'Close', style: 'cancel' },
-    ]);
-  };
+  const openSettings = () => setShowSettings(true);
+  const closeSettings = () => setShowSettings(false);
 
   const openAchievements = () => {
     setActiveTab('Challenges');
@@ -2151,6 +2170,71 @@ export default function App() {
     ),
   };
 
+  const settingsScreen = (
+    <ScrollView
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={styles.settingsHeader}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Back to profile"
+          onPress={closeSettings}
+          style={({ pressed }) => [
+            styles.settingsBackButton,
+            { opacity: pressed ? 0.65 : 1 },
+          ]}
+        >
+          <ChevronLeft size={22} color={INK} />
+        </Pressable>
+
+        <View style={styles.settingsHeaderCopy}>
+          <Text style={styles.settingsEyebrow}>PREFERENCES</Text>
+          <Text style={styles.settingsTitle}>Settings</Text>
+          <Text style={styles.settingsSubtitle}>
+            App information and data transparency.
+          </Text>
+        </View>
+      </View>
+
+      <Text style={styles.settingsSectionLabel}>PRIVACY & DATA</Text>
+      <View style={styles.settingsCard}>
+        <View style={styles.settingsCardHeading}>
+          <Settings size={17} color={ORANGE} />
+          <Text style={styles.settingsCardTitle}>Your data stays on this device</Text>
+        </View>
+        <Text style={styles.settingsCardBody}>
+          Your step history, daily goal, and earned achievements are saved
+          locally on this device. Online rankings and friend features are
+          not currently available.
+        </Text>
+      </View>
+
+      <Text style={styles.settingsSectionLabel}>SUPPORT</Text>
+      <View style={styles.settingsCard}>
+        <View style={styles.settingsCardHeading}>
+          <Heart size={17} color={ORANGE} />
+          <Text style={styles.settingsCardTitle}>Need help?</Text>
+        </View>
+        <Text style={styles.settingsCardBody}>
+          There is currently no in-app support account or online support
+          service connected. You can review tracking information in
+          Profile → Health Preferences and your recorded activity in
+          Profile → Activity History.
+        </Text>
+      </View>
+
+      <Text style={styles.settingsSectionLabel}>ABOUT</Text>
+      <View style={styles.settingsCard}>
+        <Text style={styles.settingsCardTitle}>StepArena</Text>
+        <Text style={styles.settingsCardBody}>
+          A personal step-activity tracker with daily goals, activity
+          history, and achievement milestones.
+        </Text>
+      </View>
+    </ScrollView>
+  );
+
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
@@ -2161,7 +2245,7 @@ export default function App() {
             { opacity: fade, transform: [{ translateY: slide }] },
           ]}
         >
-          {screens[activeTab]}
+          {showSettings ? settingsScreen : screens[activeTab]}
         </Animated.View>
 
         {showIntro && (
@@ -2334,7 +2418,7 @@ export default function App() {
           </View>
         )}
 
-        <View style={styles.bottomNav}>
+        <View style={[styles.bottomNav, showSettings && styles.hiddenBottomNav]}>
           {tabs.map(({ name, icon: Icon }) => {
             const selected = activeTab === name;
             return (
@@ -2918,6 +3002,76 @@ function createStyles() {
     marginTop: 23,
     marginBottom: 3,
   },
+  settingsHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 14,
+    marginBottom: 12,
+  },
+  settingsBackButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: SURFACE,
+    borderWidth: 1,
+    borderColor: LINE,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  settingsHeaderCopy: {
+    flex: 1,
+    paddingTop: 2,
+  },
+  settingsEyebrow: {
+    color: ORANGE,
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 1.8,
+    marginBottom: 5,
+  },
+  settingsTitle: {
+    color: INK,
+    fontSize: 27,
+    fontWeight: '500',
+    letterSpacing: -0.7,
+  },
+  settingsSubtitle: {
+    color: MUTED,
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 4,
+  },
+  settingsSectionLabel: {
+    color: MUTED,
+    fontSize: 9,
+    fontWeight: '600',
+    letterSpacing: 1.7,
+    marginTop: 24,
+    marginBottom: 10,
+  },
+  settingsCard: {
+    backgroundColor: SURFACE,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: LINE,
+    padding: 17,
+  },
+  settingsCardHeading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 9,
+    marginBottom: 10,
+  },
+  settingsCardTitle: {
+    color: INK,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  settingsCardBody: {
+    color: MUTED,
+    fontSize: 12,
+    lineHeight: 19,
+  },
   settingRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2934,6 +3088,7 @@ function createStyles() {
     alignItems: 'center',
     justifyContent: 'center',
   },
+  hiddenBottomNav: { display: 'none' },
   bottomNav: {
     height: 69,
     backgroundColor: PAPER,
